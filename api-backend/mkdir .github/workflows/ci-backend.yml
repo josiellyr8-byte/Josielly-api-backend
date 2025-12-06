@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ main ] 
     
-
 jobs:
   build-and-lint:
    
@@ -40,8 +39,9 @@ jobs:
         with:
           
           args: >
-            -Dsonar.projectKey=SEU_PROJECT_KEY_AQUI # SUBSTITUA
-            -Dsonar.organization=SUA_ORGANIZACAO_AQUI # SUBSTITUA
-            -Dsonar.sources=src # Analisa apenas o código-fonte
-            -Dsonar.tests=src # Trata arquivos em src/ como fonte de teste
-            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info # (Para cobertura de teste futura)
+            -Dsonar.projectKey=seu-usuario_api-backend
+            -Dsonar.organization=seu-usuario
+            -Dsonar.sources=src 
+            -Dsonar.tests=src 
+            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
+
