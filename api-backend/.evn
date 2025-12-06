@@ -1,0 +1,2 @@
+DATABASE_URL="postgresql://USUARIO:SENHA@HOST:PORTA/NOME_DO_BANCO?schema=public";
+JWT_SECRET="sua_chave_secreta_muito_forte_aqui_123"
