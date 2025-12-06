@@ -1,23 +1,17 @@
-// api-backend/prisma/schema.prisma
-
-// Define o PostgreSQL como o banco de dados (provider)
 datasource db {
   provider = "postgresql"
   url = env("DATABASE_URL")
 }
 
-// O gerador de código para TypeScript/JavaScript
 generator client {
   provider = "prisma-client-js"
 }
 
-// O seu modelo para a tabela de Usuários (necessário para o Login)
 model Usuario {
-  id    Int     @id @default(autoincrement()) // ID único, chave primária
-  email String  @unique // O email, deve ser único (para Login)
-  senha String  // O campo da senha (usará Bcrypt para salvar o hash)
-  nome  String? // Nome opcional
+  id    Int     @id @default(autoincrement()) 
+  email String  @unique 
+  senha String  
+  nome  String? 
 
-  // Se for usar o NestJS, você pode querer um nome de tabela específico
   @@map("usuarios") 
 }
