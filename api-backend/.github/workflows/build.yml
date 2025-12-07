@@ -1,0 +1,66 @@
+name: CI/CD Backend - API
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # Shallow clones devem ser desativados para o SonarCloud funcionar corretamente.
+        fetch-depth: 0 
+
+    - name: Setup Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install dependencies and Generate Prisma Client
+      # Instala dependências e garante que o Prisma Client seja gerado
+      run: npm ci && npx prisma generate
+
+    - name: 1. Run Lint (ESLint Check)
+      # Executa o linter para garantir que não há erros de qualidade/estilo
+      run: npm run lint
+
+    - name: 2. Run Tests (Jest with Coverage)
+      # Executa testes e gera o relatório de cobertura (lcov.info), essencial para o Sonar
+      run: npm run test -- --coverage
+
+    - name: 3. SonarCloud Scan and Quality Gate Check
+      # Action CORRETA para SonarCloud que automaticamente falha se o Quality Gate for reprovado
+      uses: SonarSource/sonarcloud-github-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Secret SonarCloud
+      with:
+        args: >
+          -Dsonar.organization=josiellyr8-byte 
+          -Dsonar.projectKey=josiellyr8-byte_api-backend
+          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info # Liga o relatório de cobertura
+
+    - name: 4. Build TypeScript
+      # Compila o código TypeScript para a pasta 'dist'
+      run: npm run build
+
+  deploy:
+    needs: ci
+    # SÓ roda se o push for para 'main' E o job 'ci' (incluindo Sonar) for bem-sucedido
+    if: github.ref == 'refs/heads/main' && success() 
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Render Deploy Hook (API Web Service)
+      # Aciona o Deploy Hook no Render via API Key
+      run: |
+        curl -X POST \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+        https://api.render.com/v1/services/${{ secrets.RENDER_BACKEND_SERVICE_ID }}/deploys
+
+
