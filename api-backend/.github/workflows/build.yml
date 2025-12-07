@@ -1,0 +1,63 @@
+name: CI/CD Backend - API
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # Necessário para o SonarCloud analisar o histórico da branch.
+        fetch-depth: 0 
+
+    - name: Setup Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install dependencies and Generate Prisma Client
+      # Instala as dependências e gera o Prisma Client
+      run: npm ci && npx prisma generate
+
+    - name: 1. Run Lint (ESLint Check)
+      run: npm run lint
+
+    - name: 2. Run Tests (Jest with Coverage)
+      # Executa testes e gera o relatório de cobertura, crucial para o Quality Gate
+      run: npm run test -- --coverage
+
+    - name: 3. SonarCloud Scan and Quality Gate Check
+      # Esta action faz o scan, espera o resultado e falha se o Quality Gate não for Aprovado.
+      uses: SonarSource/sonarcloud-github-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Token SonarCloud configurado
+      with:
+        args: >
+          -Dsonar.organization=josiellyr8-byte 
+          -Dsonar.projectKey=josiellyr8-byte_api-backend
+          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info # Liga o relatório de cobertura
+
+    - name: 4. Build TypeScript
+      # Compila o código para a pasta 'dist'
+      run: npm run build
+
+  deploy:
+    needs: ci
+    # SÓ roda se o push for para 'main' E se a etapa 'ci' (incluindo Sonar) for bem-sucedida
+    if: github.ref == 'refs/heads/main' && success() 
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Render Deploy Hook (API Web Service)
+      # Aciona o Deploy Hook no Render usando a API Key e o Service ID
+      run: |
+        curl -X POST \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+        https://api.render.com/v1/services/${{ secrets.RENDER_BACKEND_SERVICE_ID }}/deploys
